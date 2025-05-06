@@ -1,4 +1,4 @@
-![vektor (1)](https://github.com/user-attachments/assets/2332485c-1e6a-45f0-a456-cab4bba8e498)  
+![vektor (1)](https://github.com/user-attachments/assets/886c3cf6-fa94-4527-9d64-4fc9d2a4a61c)  
 **Technical Specification: Web-Based Interactive Terminal Inspired by MobaXterm**
 
 **Objective**: Develop a secure and functional web interface resembling MobaXterm, with a dynamic file explorer on the left, an interactive Debian-like terminal on the right, and optional contextual information panels.
