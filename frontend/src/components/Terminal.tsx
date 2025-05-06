@@ -45,18 +45,44 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
     if (!terminalRef.current) return;
 
     try {
-      // Create new terminal instance
+      // Create new terminal instance with glassmorphic styling
       const newTerm = new XTerm({
         cursorBlink: true,
         theme: {
-          background: '#1E1E1E',
+          background: 'rgba(18, 18, 25, 0.4)', // Semi-transparent background
           foreground: '#F8F8F8',
+          cursor: '#f0f0f0',
+          cursorAccent: 'rgba(255, 255, 255, 0.3)',
+          selectionBackground: 'rgba(255, 255, 255, 0.25)',
+          black: '#121216',
+          red: '#ff5b5b',
+          green: '#57d9a2',
+          yellow: '#f7c856',
+          blue: '#7AA2F7',
+          magenta: '#C678DD',
+          cyan: '#70C0BA',
+          white: '#DEDEDE',
+          brightBlack: '#666666',
+          brightRed: '#FF8080',
+          brightGreen: '#9AEDCF',
+          brightYellow: '#FBDB99',
+          brightBlue: '#A9BCFF',
+          brightMagenta: '#E2ADFF',
+          brightCyan: '#A5E6E2',
+          brightWhite: '#FFFFFF',
         },
-        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        fontFamily: 'JetBrains Mono, Menlo, Monaco, "Courier New", monospace',
+        fontSize: 14,
+        lineHeight: 1.3,
+        letterSpacing: 0.5,
+        fontWeight: '400',
+        fontWeightBold: '700',
         cols: 80,
         rows: 24,
         convertEol: true,
         disableStdin: false,
+        allowTransparency: true, // Enable transparency for glass effect
+        drawBoldTextInBrightColors: true,
       });
 
       // Store in ref
@@ -91,10 +117,17 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
             fitAddon.current.fit();
           }
 
-          // Show welcome message
-          newTerm.writeln('Welcome to Vektor!');
-          newTerm.writeln('Type "help" for a list of available commands.');
-          newTerm.writeln('');
+          // Show welcome message with styled header
+          newTerm.writeln("");
+          newTerm.writeln("\x1b[38;2;147;114;229m╔═══════════════════════════════════════════════════════════════════╗\x1b[0m");
+          newTerm.writeln("\x1b[38;2;147;114;229m║                                                                   ║\x1b[0m");
+          newTerm.writeln("\x1b[38;2;147;114;229m║\x1b[0m   \x1b[1;38;2;142;209;252mWelcome to Vektor Terminal\x1b[0m                                  \x1b[38;2;147;114;229m    ║\x1b[0m");
+          newTerm.writeln("\x1b[38;2;147;114;229m║\x1b[0m   \x1b[3;38;2;189;189;189mA modern cloud-based terminal experience\x1b[0m                    \x1b[38;2;147;114;229m    ║\x1b[0m");
+          newTerm.writeln("\x1b[38;2;147;114;229m║                                                                   ║\x1b[0m");
+          newTerm.writeln("\x1b[38;2;147;114;229m╚═══════════════════════════════════════════════════════════════════╝\x1b[0m");
+          newTerm.writeln("");
+          newTerm.writeln("\x1b[38;2;170;170;170mType \x1b[1;38;2;87;199;255mhelp\x1b[0;38;2;170;170;170m for available commands\x1b[0m");
+          newTerm.writeln("");
 
           // Show initial prompt
           writePrompt(newTerm, currentPath);
@@ -110,7 +143,7 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
         } catch (err) {
           console.error('Terminal initialization error:', err);
         }
-      }, 200);
+      }, 300);
     } catch (err) {
       console.error('Terminal creation error:', err);
     }
@@ -129,9 +162,8 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
     fitAddon.current = null;
   };
 
-  // Rest of your terminal component code remains the same
+  // Rest of your terminal component code
   const setupKeyboardHandling = (terminal: XTerm) => {
-    // Your existing setupKeyboardHandling code
     commandBuffer.current = '';
 
     terminal.onKey(({ key, domEvent }: { key: string; domEvent: KeyboardEvent }) => {
@@ -168,12 +200,14 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
     });
   };
 
-  // Your existing writePrompt, getFileContents, etc. functions remain the same
+  // Stylized prompt that fits the glassmorphic theme
   const writePrompt = (terminal: XTerm, path: string) => {
-    terminal.write(`\r\n\x1b[1;32muser@vektor\x1b[0m:\x1b[1;34m${path}\x1b[0m$ `);
+    terminal.write(`\r\n\x1b[1;38;2;111;194;255muser\x1b[0;38;2;170;170;170m@\x1b[1;38;2;170;111;255mvektor\x1b[0;38;2;170;170;170m:\x1b[1;38;2;111;148;255m${path}\x1b[0;38;2;170;170;170m$ \x1b[0m`);
   };
 
+  // Your existing functions remain the same
   const getFileContents = (filePath: string): string | null => {
+    // Existing code...
     const mockFileContents: Record<string, string> = {
       '/home/user/file1.txt': 'Hello World!',
       '/home/user/file2.txt': 'Sample Content',
@@ -187,7 +221,7 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
 
   // Get mock files for a path
   const getMockFilesForPath = (path: string) => {
-    // Mock file system data
+    // Existing code...
     const mockFileSystem: Record<string, Array<{name: string, type: string}>> = {
       '/': [
         { name: 'home', type: 'directory' },
@@ -221,6 +255,7 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
 
   // Show file listing for a specific path
   const showListingForPath = (terminal: XTerm, path: string) => {
+    // Existing code with enhanced styling...
     const files = getMockFilesForPath(path);
     
     if (files.length === 0) {
@@ -233,10 +268,10 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
     files.forEach(file => {
       if (file.type === 'directory') {
         // Blue for directories
-        output += `\x1b[1;34m${file.name}/\x1b[0m  `;
+        output += `\x1b[1;38;2;111;148;255m${file.name}/\x1b[0m  `;
       } else {
         // Normal text for files
-        output += `${file.name}  `;
+        output += `\x1b[38;2;220;220;220m${file.name}\x1b[0m  `;
       }
     });
     
@@ -245,6 +280,7 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
 
   // Show man page for a command
   const showManPage = (terminal: XTerm, command: string) => {
+    // Existing code...
     const manPages: Record<string, string> = {
       ls: 'NAME\n    ls - list directory contents\n\nSYNOPSIS\n    ls [DIRECTORY]\n\nDESCRIPTION\n    List information about the DIRECTORY (current directory by default).',
       
@@ -276,6 +312,7 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
 
   // Process commands locally for immediate feedback
   const processCommand = (terminal: XTerm, cmd: string) => {
+    // Existing code...
     const command = cmd.trim();
     const args = command.split(' ');
     const mainCommand = args[0].toLowerCase();
@@ -407,13 +444,13 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
         
       case 'tree':
         // Simple tree implementation for the current directory
-        terminal.writeln(`\x1b[1;34m${currentPath}\x1b[0m`);
+        terminal.writeln(`\x1b[1;38;2;111;148;255m${currentPath}\x1b[0m`);
         const files = getMockFilesForPath(currentPath);
         files.forEach(file => {
           if (file.type === 'directory') {
-            terminal.writeln(`├── \x1b[1;34m${file.name}/\x1b[0m`);
+            terminal.writeln(`├── \x1b[1;38;2;111;148;255m${file.name}/\x1b[0m`);
           } else {
-            terminal.writeln(`├── ${file.name}`);
+            terminal.writeln(`├── \x1b[38;2;220;220;220m${file.name}\x1b[0m`);
           }
         });
         break;
@@ -428,38 +465,75 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
         break;
 
       case 'help':
-        terminal.writeln('Available commands:');
-        terminal.writeln('  ls           - List files and directories');
-        terminal.writeln('  cd [dir]     - Change directory');
-        terminal.writeln('  pwd          - Print current directory');
-        terminal.writeln('  cat [file]   - Display file contents');
-        terminal.writeln('  head [file]  - Display first lines of a file');
-        terminal.writeln('  tail [file]  - Display last lines of a file');
-        terminal.writeln('  grep [pattern] [file] - Search for pattern in file');
-        terminal.writeln('  tree         - Display directory structure as a tree');
-        terminal.writeln('  echo [text]  - Display text');
-        terminal.writeln('  man [command] - Display manual for command');
-        terminal.writeln('  clear        - Clear the terminal');
-        terminal.writeln('  help         - Display this help message');
+        terminal.writeln("\x1b[1;38;2;142;209;252mAvailable commands:\x1b[0m");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mls\x1b[0m           - List files and directories");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mcd [dir]\x1b[0m     - Change directory");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mpwd\x1b[0m          - Print current directory");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mcat [file]\x1b[0m   - Display file contents");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mhead [file]\x1b[0m  - Display first lines of a file");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mtail [file]\x1b[0m  - Display last lines of a file");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mgrep [pattern] [file]\x1b[0m - Search for pattern in file");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mtree\x1b[0m         - Display directory structure as a tree");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mecho [text]\x1b[0m  - Display text");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mman [command]\x1b[0m - Display manual for command");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mclear\x1b[0m        - Clear the terminal");
+        terminal.writeln("  \x1b[1;38;2;255;189;89mhelp\x1b[0m         - Display this help message");
         break;
 
       default:
-        terminal.writeln(`Command not found: ${command}`);
+        terminal.writeln(`\x1b[38;2;255;108;108mCommand not found:\x1b[0m ${command}`);
     }
   };
 
   return (
-    <div 
-      ref={terminalRef} 
-      style={{ 
-        width: '100%', 
-        height: '100%',
-        backgroundColor: '#1E1E1E',
-        display: 'flex',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-    />
+    <div className="relative h-full w-full rounded-xl overflow-hidden">
+      {/* Frosted glass background effect */}
+      <div 
+        className="absolute inset-0 z-0"
+        style={{ 
+          backdropFilter: 'blur(8px)',
+          backgroundColor: 'rgba(20, 21, 30, 0.5)',
+          boxShadow: 'inset 0 0 4px rgba(255, 255, 255, 0.1), 0 4px 30px rgba(0, 0, 0, 0.2)',
+          borderRadius: 'inherit',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+        }}
+      />
+      
+      {/* Terminal inner container */}
+      <div 
+        ref={terminalRef}
+        className="absolute inset-1.5 z-10 rounded-lg overflow-hidden"
+        style={{ 
+          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(16, 17, 25, 0.6)',
+          boxShadow: 'inset 0 0 2px rgba(255, 255, 255, 0.05)',
+        }}
+      />
+
+      {/* Terminal toolbar (optional touch) */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-8 z-20 px-4 flex items-center"
+        style={{
+          backgroundColor: 'rgba(24, 25, 36, 0.6)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
+        <div className="flex space-x-1.5">
+          <div className="w-3 h-3 bg-red-500 rounded-full opacity-70" />
+          <div className="w-3 h-3 bg-yellow-500 rounded-full opacity-70" />
+          <div className="w-3 h-3 bg-green-500 rounded-full opacity-70" />
+        </div>
+        <div className="absolute left-1/2 transform -translate-x-1/2 text-xs font-mono text-white/40">
+          vektor terminal
+        </div>
+      </div>
+      
+      {/* Add some decorative elements */}
+      <div className="absolute bottom-3 right-3 text-xs font-mono z-20 opacity-30 select-none">
+        vektor@{new Date().getFullYear()}
+      </div>
+    </div>
   );
 };
 

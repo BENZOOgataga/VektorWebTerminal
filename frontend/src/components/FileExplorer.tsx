@@ -67,39 +67,43 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentPath, files, onFileC
   };
 
   return (
-    <div className="p-2">
-      <div className="mb-4 p-2 bg-gray-800 rounded">
-        <h2 className="font-bold truncate">{currentPath}</h2>
+    <div className="h-full flex flex-col">
+      <div className="mb-4 p-3 bg-glass backdrop-blur-sm border-b border-glass shadow-glass-inner">
+        <h2 className="font-bold truncate text-white">
+          <span className="opacity-60 mr-1">~/</span>{currentPath}
+        </h2>
       </div>
       
-      <div className="space-y-1">
-        {/* Parent directory option - only show if not at root */}
-        {currentPath !== '/' && (
-          <div 
-            className="flex items-center p-2 hover:bg-gray-800 rounded cursor-pointer"
-            onClick={navigateToParentDirectory}
-          >
-            <FaIcons.FaFolder className="text-yellow-400 mr-2" />
-            <span>..</span>
-          </div>
-        )}
-        
-        {/* File list */}
-        {files.map((file, index) => (
-          <div 
-            key={index}
-            className="flex items-center p-2 hover:bg-gray-800 rounded cursor-pointer"
-            onClick={() => onFileClick(file.path, file.type)}
-          >
-            <span className="mr-2">{getFileIcon(file)}</span>
-            <span className="truncate">{file.name}</span>
-          </div>
-        ))}
-        
-        {/* Empty state */}
-        {files.length === 0 && (
-          <div className="text-gray-500 italic p-2">This directory is empty</div>
-        )}
+      <div className="flex-1 overflow-auto px-2 pb-2">
+        <div className="space-y-1 rounded-lg bg-glass backdrop-blur-xs p-2 shadow-glass-inner">
+          {/* Parent directory option - only show if not at root */}
+          {currentPath !== '/' && (
+            <div 
+              className="flex items-center p-2.5 hover:bg-white/10 rounded-md cursor-pointer transition-colors duration-150"
+              onClick={navigateToParentDirectory}
+            >
+              <FaIcons.FaFolder className="text-yellow-400 mr-2.5" />
+              <span className="text-gray-300 font-medium">..</span>
+            </div>
+          )}
+          
+          {/* File list */}
+          {files.map((file, index) => (
+            <div 
+              key={index}
+              className="flex items-center p-2.5 hover:bg-white/10 rounded-md cursor-pointer transition-colors duration-150"
+              onClick={() => onFileClick(file.path, file.type)}
+            >
+              <span className="mr-2.5">{getFileIcon(file)}</span>
+              <span className="truncate text-gray-300 font-medium">{file.name}</span>
+            </div>
+          ))}
+          
+          {/* Empty state */}
+          {files.length === 0 && (
+            <div className="text-gray-500 italic p-4 text-center">This directory is empty</div>
+          )}
+        </div>
       </div>
     </div>
   );

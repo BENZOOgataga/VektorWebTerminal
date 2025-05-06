@@ -158,9 +158,18 @@ function App() {
     <>
       <LoadingOverlay isLoading={isLoading} />
       
-      <div className="flex h-screen bg-gray-900 text-gray-200">
+      {/* Background with gradient */}
+      <div 
+        className="fixed inset-0 z-0" 
+        style={{
+          background: 'radial-gradient(circle at 30% 30%, #341b47, #1a1625 50%, #0d0d14)',
+          backgroundAttachment: 'fixed',
+        }}
+      />
+      
+      <div className="relative z-10 flex h-screen overflow-hidden text-gray-200">
         {/* File Explorer */}
-        <div className="w-1/4 border-r border-gray-700 overflow-auto">
+        <div className="w-1/4 border-r border-glass backdrop-blur-md bg-glass-darker overflow-hidden">
           <FileExplorer 
             currentPath={currentPath}
             files={files}
@@ -169,9 +178,9 @@ function App() {
         </div>
         
         {/* Terminal and Context Panel */}
-        <div className="w-3/4 flex flex-col">
+        <div className="w-3/4 flex flex-col backdrop-blur-md bg-[rgba(0,0,0,0.4)] overflow-hidden">
           {/* Terminal */}
-          <div className="flex-grow">
+          <div className="flex-grow p-1">
             <Terminal 
               onCommand={handleCommand}
               currentPath={currentPath}
@@ -180,7 +189,7 @@ function App() {
           
           {/* Contextual Information Panel (Optional) */}
           {showContextPanel && (
-            <div className="h-1/4 border-t border-gray-700 p-2 overflow-auto">
+            <div className="h-1/4 border-t border-glass p-2 bg-glass backdrop-blur-sm overflow-auto">
               <ContextPanel 
                 commandHistory={commandHistory}
                 resourceUsage={{ cpu: '2%', memory: '128MB' }}
