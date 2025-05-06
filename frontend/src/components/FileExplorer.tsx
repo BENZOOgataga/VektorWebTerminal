@@ -46,6 +46,26 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentPath, files, onFileC
     }
   };
 
+  // Function to handle parent directory navigation
+  const navigateToParentDirectory = () => {
+    // Split the path and remove the last part
+    const pathParts = currentPath.split('/').filter(Boolean);
+    
+    if (pathParts.length === 0) {
+      // We're already at root, don't go up further
+      return;
+    }
+    
+    // Remove the last directory from the path
+    pathParts.pop();
+    
+    // Construct new path
+    const newPath = pathParts.length === 0 ? '/' : '/' + pathParts.join('/');
+    
+    // Navigate to parent directory
+    onFileClick(newPath, 'directory');
+  };
+
   return (
     <div className="p-2">
       <div className="mb-4 p-2 bg-gray-800 rounded">
@@ -53,14 +73,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentPath, files, onFileC
       </div>
       
       <div className="space-y-1">
-        {/* Parent directory option */}
-        <div 
-          className="flex items-center p-2 hover:bg-gray-800 rounded cursor-pointer"
-          onClick={() => onFileClick(`${currentPath}/..`, 'directory')}
-        >
-          <FaIcons.FaFolder className="text-yellow-400 mr-2" />
-          <span>..</span>
-        </div>
+        {/* Parent directory option - only show if not at root */}
+        {currentPath !== '/' && (
+          <div 
+            className="flex items-center p-2 hover:bg-gray-800 rounded cursor-pointer"
+            onClick={navigateToParentDirectory}
+          >
+            <FaIcons.FaFolder className="text-yellow-400 mr-2" />
+            <span>..</span>
+          </div>
+        )}
         
         {/* File list */}
         {files.map((file, index) => (

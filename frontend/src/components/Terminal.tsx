@@ -10,177 +10,235 @@ interface TerminalProps {
 
 const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<XTerm | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
-  
-  // Initialize terminal
+  const term = useRef<XTerm | null>(null);
+  const fitAddon = useRef<FitAddon | null>(null);
+  const commandBuffer = useRef<string>('');
+
+  // Initialize terminal on first render
   useEffect(() => {
-    // Only initialize if the ref is available
+    // Clean up previous terminal if it exists
+    if (term.current) {
+      term.current.dispose();
+      term.current = null;
+      fitAddon.current = null;
+    }
+
+    // Wait for the DOM element to be available
     if (!terminalRef.current) return;
 
-    try {
-      // Create terminal instance
-      const term = new XTerm({
-        cursorBlink: true,
-        theme: {
-          background: '#1E1E1E',
-          foreground: '#F8F8F8',
-        },
-        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-        cols: 80,
-        rows: 24,
-        convertEol: true,
-      });
+    // Create new terminal instance with fixed dimensions
+    const newTerm = new XTerm({
+      cursorBlink: true,
+      theme: {
+        background: '#1E1E1E',
+        foreground: '#F8F8F8',
+      },
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      cols: 80, // Set fixed dimensions
+      rows: 24,
+      convertEol: true,
+      disableStdin: false,
+    });
 
-      // Store in ref
-      xtermRef.current = term;
+    // Store the terminal in ref
+    term.current = newTerm;
 
-      // Open terminal in container
-      term.open(terminalRef.current);
+    // Create and load fit addon
+    const newFitAddon = new FitAddon();
+    newTerm.loadAddon(newFitAddon);
+    fitAddon.current = newFitAddon;
 
-      // Create fit addon
-      const fitAddon = new FitAddon();
-      fitAddonRef.current = fitAddon;
-      term.loadAddon(fitAddon);
+    // Open terminal in the container
+    newTerm.open(terminalRef.current);
 
-      // Try to fit the terminal
-      setTimeout(() => {
-        try {
-          fitAddon.fit();
-        } catch (e) {
-          console.error('Error fitting terminal:', e);
+    // Add a delay before trying to fit
+    setTimeout(() => {
+      try {
+        // Try to fit terminal to container
+        if (fitAddon.current) {
+          fitAddon.current.fit();
         }
 
-        // Display welcome message
-        term.writeln('Welcome to WebTerminal!');
-        term.writeln('Type "help" for a list of available commands.');
-        term.writeln('');
-        
+        // Show welcome message
+        newTerm.writeln('Welcome to WebTerminal!');
+        newTerm.writeln('Type "help" for a list of available commands.');
+        newTerm.writeln('');
+
         // Show initial prompt
-        displayPrompt(term, currentPath);
-        
-        // Setup input handling
-        setupTerminalInput(term);
-      }, 100);
+        writePrompt(newTerm, currentPath);
 
-      // Handle resize
-      const handleResize = () => {
+        // Set up input handling
+        setupKeyboardHandling(newTerm);
+      } catch (err) {
+        console.error('Terminal initialization error:', err);
+      }
+    }, 100);
+
+    // Handle window resize events
+    const handleResize = () => {
+      if (fitAddon.current) {
         try {
-          if (fitAddonRef.current) {
-            fitAddonRef.current.fit();
-          }
+          fitAddon.current.fit();
         } catch (e) {
-          console.error('Error resizing terminal:', e);
+          // Ignore errors during resize
         }
-      };
-      
-      window.addEventListener('resize', handleResize);
+      }
+    };
+    window.addEventListener('resize', handleResize);
 
-      // Clean up function
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        if (xtermRef.current) {
-          xtermRef.current.dispose();
-          xtermRef.current = null;
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      
+      if (term.current) {
+        try {
+          term.current.dispose();
+        } catch (e) {
+          console.error('Error disposing terminal:', e);
         }
-      };
-    } catch (e) {
-      console.error('Error initializing terminal:', e);
+        term.current = null;
+      }
+    };
+  }, []); // Only run once on initial render
+
+  // Update prompt when currentPath changes
+  useEffect(() => {
+    if (term.current) {
+      // Just store the updated path, don't recreate the terminal
     }
-  }, [currentPath]); // Include currentPath to update prompt when it changes
+  }, [currentPath]);
 
-  // Setup terminal input handling
-  const setupTerminalInput = (term: XTerm) => {
-    let currentCommand = '';
-    
-    term.onKey(({ key, domEvent }: { key: string; domEvent: KeyboardEvent }) => {
-      const charCode = key.charCodeAt(0);
+  // Set up keyboard handling
+  const setupKeyboardHandling = (terminal: XTerm) => {
+    commandBuffer.current = '';
+
+    terminal.onKey(({ key, domEvent }: { key: string; domEvent: KeyboardEvent }) => {
+      const ev = domEvent;
+      const printable = !ev.altKey && !ev.ctrlKey && !ev.metaKey;
       
-      // Handle Enter key
-      if (domEvent.key === 'Enter') {
-        term.writeln('');
-        if (currentCommand.trim()) {
-          // Pass command to parent
-          onCommand(currentCommand);
+      if (ev.keyCode === 13) { // Enter key
+        // Process the command
+        terminal.writeln('');
+        if (commandBuffer.current.trim()) {
+          const command = commandBuffer.current;
+          commandBuffer.current = '';
           
-          // Handle command locally
-          handleCommand(term, currentCommand);
+          // Send command to parent
+          onCommand(command);
+          
+          // Process command locally
+          processCommand(terminal, command);
         }
         
-        // Reset command buffer and show new prompt
-        currentCommand = '';
-        displayPrompt(term, currentPath);
-      }
-      // Handle Backspace
-      else if (domEvent.key === 'Backspace') {
-        if (currentCommand.length > 0) {
-          currentCommand = currentCommand.slice(0, -1);
-          term.write('\b \b');
+        // Show new prompt
+        writePrompt(terminal, currentPath);
+      } else if (ev.keyCode === 8) { // Backspace
+        // Only delete if there's text in the buffer
+        if (commandBuffer.current.length > 0) {
+          commandBuffer.current = commandBuffer.current.substring(0, commandBuffer.current.length - 1);
+          terminal.write('\b \b'); // Erase the character
         }
-      }
-      // Handle printable characters
-      else if (charCode >= 32 && charCode <= 126) {
-        currentCommand += key;
-        term.write(key);
+      } else if (printable) {
+        // For normal printable characters
+        commandBuffer.current += key;
+        terminal.write(key);
       }
     });
   };
-  
-  const displayPrompt = (term: XTerm, path: string) => {
-    const username = 'user'; // Changed from 'term-user' to 'user'
-    const hostname = 'webterminal';
-    const prompt = `\r\n\x1b[1;32m${username}@${hostname}\x1b[0m:\x1b[1;34m${path}\x1b[0m$ `;
-    term.write(prompt);
+
+  // Write the prompt with username, hostname and path
+  const writePrompt = (terminal: XTerm, path: string) => {
+    terminal.write(`\r\n\x1b[1;32muser@webterminal\x1b[0m:\x1b[1;34m${path}\x1b[0m$ `);
   };
-  
-  const handleCommand = (term: XTerm, command: string) => {
-    const cmd = command.trim();
+
+  // Process commands locally for immediate feedback
+  const processCommand = (terminal: XTerm, cmd: string) => {
+    const command = cmd.trim();
+
+    if (command === 'clear') {
+      terminal.clear();
+    } else if (command === 'ls') {
+      // Show mock directory listing based on current path
+      showListingForPath(terminal, currentPath);
+    } else if (command === 'pwd') {
+      terminal.writeln(currentPath);
+    } else if (command === 'help') {
+      terminal.writeln('Available commands:');
+      terminal.writeln('  ls           - List files and directories');
+      terminal.writeln('  cd [dir]     - Change directory');
+      terminal.writeln('  pwd          - Print current directory');
+      terminal.writeln('  cat [file]   - Display file contents');
+      terminal.writeln('  echo [text]  - Display text');
+      terminal.writeln('  clear        - Clear the terminal');
+      terminal.writeln('  help         - Display this help message');
+    } else if (command.startsWith('echo ')) {
+      terminal.writeln(command.substring(5));
+    } else {
+      terminal.writeln(`Command not found: ${command}`);
+    }
+  };
+
+  // Show file listing for a specific path
+  const showListingForPath = (terminal: XTerm, path: string) => {
+    // Mock file system data
+    const mockFileSystem: Record<string, Array<{name: string, type: string}>> = {
+      '/': [
+        { name: 'home', type: 'directory' },
+        { name: 'etc', type: 'directory' },
+        { name: 'var', type: 'directory' },
+      ],
+      '/home': [
+        { name: 'user', type: 'directory' },
+      ],
+      '/home/user': [
+        { name: 'file1.txt', type: 'file' },
+        { name: 'file2.txt', type: 'file' },
+        { name: 'projects', type: 'directory' },
+        { name: 'documents', type: 'directory' },
+      ],
+      '/home/user/projects': [
+        { name: 'demo', type: 'directory' },
+      ],
+      '/home/user/projects/demo': [
+        { name: 'script.js', type: 'file' },
+        { name: 'index.html', type: 'file' },
+      ],
+      '/home/user/documents': [
+        { name: 'notes.txt', type: 'file' },
+        { name: 'image.png', type: 'file' },
+      ]
+    };
+
+    // Get files for the current path
+    const files = mockFileSystem[path] || [];
     
-    if (cmd === 'clear') {
-      term.clear();
+    if (files.length === 0) {
+      terminal.writeln('');
       return;
     }
     
-    if (cmd === 'ls') {
-      term.writeln('file1.txt  file2.txt  directory1/  directory2/');
-      return;
-    }
+    // Format output with colors
+    let output = '';
+    files.forEach(file => {
+      if (file.type === 'directory') {
+        // Blue for directories
+        output += `\x1b[1;34m${file.name}/\x1b[0m  `;
+      } else {
+        // Normal text for files
+        output += `${file.name}  `;
+      }
+    });
     
-    if (cmd === 'pwd') {
-      term.writeln(currentPath);
-      return;
-    }
-    
-    if (cmd === 'help') {
-      term.writeln('Available commands:');
-      term.writeln('  ls           - List files and directories');
-      term.writeln('  cd [dir]     - Change directory');
-      term.writeln('  pwd          - Print current directory');
-      term.writeln('  cat [file]   - Display file contents');
-      term.writeln('  echo [text]  - Display text');
-      term.writeln('  clear        - Clear the terminal');
-      term.writeln('  help         - Display this help message');
-      return;
-    }
-    
-    if (cmd.startsWith('echo ')) {
-      const text = cmd.substring(5);
-      term.writeln(text);
-      return;
-    }
-    
-    term.writeln(`Command not found: ${cmd}`);
+    terminal.writeln(output);
   };
 
   return (
     <div 
       ref={terminalRef} 
-      className="h-full" 
-      style={{
-        backgroundColor: '#1E1E1E',
-        padding: '8px',
-        position: 'relative',
-        minHeight: '200px'
+      style={{ 
+        width: '100%', 
+        height: '100%',
+        backgroundColor: '#1E1E1E' 
       }}
     />
   );

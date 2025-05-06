@@ -12,6 +12,35 @@ interface FileItem {
   extension?: string;
 }
 
+// Mock file system data - this would come from your backend in a real app
+const mockFileSystem: Record<string, FileItem[]> = {
+  '/': [
+    { name: 'home', type: 'directory', path: '/home' },
+    { name: 'etc', type: 'directory', path: '/etc' },
+    { name: 'var', type: 'directory', path: '/var' },
+  ],
+  '/home': [
+    { name: 'user', type: 'directory', path: '/home/user' },
+  ],
+  '/home/user': [
+    { name: 'file1.txt', type: 'file', path: '/home/user/file1.txt', extension: 'txt' },
+    { name: 'file2.txt', type: 'file', path: '/home/user/file2.txt', extension: 'txt' },
+    { name: 'projects', type: 'directory', path: '/home/user/projects' },
+    { name: 'documents', type: 'directory', path: '/home/user/documents' },
+  ],
+  '/home/user/projects': [
+    { name: 'demo', type: 'directory', path: '/home/user/projects/demo' },
+  ],
+  '/home/user/projects/demo': [
+    { name: 'script.js', type: 'file', path: '/home/user/projects/demo/script.js', extension: 'js' },
+    { name: 'index.html', type: 'file', path: '/home/user/projects/demo/index.html', extension: 'html' },
+  ],
+  '/home/user/documents': [
+    { name: 'notes.txt', type: 'file', path: '/home/user/documents/notes.txt', extension: 'txt' },
+    { name: 'image.png', type: 'file', path: '/home/user/documents/image.png', extension: 'png' },
+  ],
+};
+
 function App() {
   const [currentPath, setCurrentPath] = useState('/home/user');
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -20,19 +49,41 @@ function App() {
   
   // Update file explorer when path changes
   useEffect(() => {
-    // In a real app, we'd fetch files from the backend here
     fetchFiles(currentPath);
   }, [currentPath]);
   
   const fetchFiles = async (path: string) => {
     try {
-      // This would be a real API call in the complete implementation
-      const response = await fetch(`http://localhost:3001/api/files?path=${path}`);
-      const data = await response.json();
-      setFiles(data);
+      // In a real app, this would be an API call to your backend
+      // For now, we'll use our mock file system
+      const normalizedPath = normalizePath(path);
+      const filesInPath = mockFileSystem[normalizedPath] || [];
+      setFiles(filesInPath);
     } catch (error) {
       console.error('Error fetching files:', error);
+      setFiles([]); // Empty array on error
     }
+  };
+
+  // Normalize paths to handle ../ and ensure they're valid
+  const normalizePath = (path: string): string => {
+    // Split path into segments
+    const segments = path.split('/').filter(Boolean);
+    const resultSegments: string[] = [];
+    
+    // Process each segment
+    for (const segment of segments) {
+      if (segment === '..') {
+        // Go up one level
+        resultSegments.pop();
+      } else if (segment !== '.') {
+        // Add segment to path (skip '.' which means current directory)
+        resultSegments.push(segment);
+      }
+    }
+    
+    // Construct normalized path
+    return '/' + resultSegments.join('/');
   };
 
   const handleCommand = (command: string) => {
@@ -40,17 +91,41 @@ function App() {
     
     // Handle cd command specifically to update file explorer
     if (command.startsWith('cd ')) {
-      const newPath = command.substring(3).trim();
-      // In real app, we'd validate this path server-side
-      setCurrentPath(newPath);
+      const target = command.substring(3).trim();
+      let newPath;
+      
+      // Handle absolute paths
+      if (target.startsWith('/')) {
+        newPath = target;
+      } 
+      // Handle relative paths
+      else {
+        // Ensure current path ends with / for proper joining
+        const base = currentPath.endsWith('/') ? currentPath : `${currentPath}/`;
+        newPath = base + target;
+      }
+      
+      // Normalize the path to handle ../, etc.
+      const normalizedPath = normalizePath(newPath);
+      
+      // Only update if the path exists in our mock file system
+      if (normalizedPath === '/' || mockFileSystem[normalizedPath]) {
+        setCurrentPath(normalizedPath);
+      }
     }
   };
 
   const handleFileClick = (path: string, type: string) => {
     if (type === 'directory') {
-      setCurrentPath(path);
+      // Normalize the path to handle ../
+      const normalizedPath = normalizePath(path);
+      setCurrentPath(normalizedPath);
+    } else {
+      // For files, you might want to simulate a cat command or show a preview
+      // For now, just add it to command history as if user typed "cat filename"
+      const filename = path.split('/').pop() || '';
+      setCommandHistory(prev => [...prev, `cat ${filename}`]);
     }
-    // Handle file clicks (cat, view, etc.) in the complete implementation
   };
 
   return (
