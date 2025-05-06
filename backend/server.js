@@ -40,7 +40,7 @@ wss.on('connection', async (ws) => {
     // Send welcome message
     ws.send(JSON.stringify({
       type: 'output',
-      data: 'Welcome to WebTerminal! Container started successfully.\n'
+      data: 'Welcome to Vektor! Container started successfully.\n'
     }));
     
     // Handle messages from client

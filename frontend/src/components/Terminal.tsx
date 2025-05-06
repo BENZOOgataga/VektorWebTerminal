@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
@@ -60,7 +60,7 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
         }
 
         // Show welcome message
-        newTerm.writeln('Welcome to WebTerminal!');
+        newTerm.writeln('Welcome to Vektor!');
         newTerm.writeln('Type "help" for a list of available commands.');
         newTerm.writeln('');
 
@@ -99,7 +99,9 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
         term.current = null;
       }
     };
-  }, []); // Only run once on initial render
+  // Add missing dependencies currentPath and setupKeyboardHandling
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPath]); // Including currentPath without setupKeyboardHandling (to avoid recreation issues)
 
   // Update prompt when currentPath changes
   useEffect(() => {
@@ -148,38 +150,24 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
 
   // Write the prompt with username, hostname and path
   const writePrompt = (terminal: XTerm, path: string) => {
-    terminal.write(`\r\n\x1b[1;32muser@webterminal\x1b[0m:\x1b[1;34m${path}\x1b[0m$ `);
+    terminal.write(`\r\n\x1b[1;32muser@vektor\x1b[0m:\x1b[1;34m${path}\x1b[0m$ `);
   };
 
-  // Process commands locally for immediate feedback
-  const processCommand = (terminal: XTerm, cmd: string) => {
-    const command = cmd.trim();
+  // Get the mock file contents for a given path
+  const getFileContents = (filePath: string): string | null => {
+    const mockFileContents: Record<string, string> = {
+      '/home/user/file1.txt': 'Hello World!',
+      '/home/user/file2.txt': 'Sample Content',
+      '/home/user/projects/demo/script.js': 'console.log(\'Hello World\');',
+      '/home/user/projects/demo/index.html': '<!DOCTYPE html>\n<html>\n<head>\n  <title>Demo</title>\n</head>\n<body>\n  <h1>Hello World</h1>\n</body>\n</html>',
+      '/home/user/documents/notes.txt': 'Important notes:\n- Remember to update the documentation\n- Fix the bug in the navigation\n- Add unit tests',
+    };
 
-    if (command === 'clear') {
-      terminal.clear();
-    } else if (command === 'ls') {
-      // Show mock directory listing based on current path
-      showListingForPath(terminal, currentPath);
-    } else if (command === 'pwd') {
-      terminal.writeln(currentPath);
-    } else if (command === 'help') {
-      terminal.writeln('Available commands:');
-      terminal.writeln('  ls           - List files and directories');
-      terminal.writeln('  cd [dir]     - Change directory');
-      terminal.writeln('  pwd          - Print current directory');
-      terminal.writeln('  cat [file]   - Display file contents');
-      terminal.writeln('  echo [text]  - Display text');
-      terminal.writeln('  clear        - Clear the terminal');
-      terminal.writeln('  help         - Display this help message');
-    } else if (command.startsWith('echo ')) {
-      terminal.writeln(command.substring(5));
-    } else {
-      terminal.writeln(`Command not found: ${command}`);
-    }
+    return mockFileContents[filePath] || null;
   };
 
-  // Show file listing for a specific path
-  const showListingForPath = (terminal: XTerm, path: string) => {
+  // Get mock files for a path
+  const getMockFilesForPath = (path: string) => {
     // Mock file system data
     const mockFileSystem: Record<string, Array<{name: string, type: string}>> = {
       '/': [
@@ -209,8 +197,12 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
       ]
     };
 
-    // Get files for the current path
-    const files = mockFileSystem[path] || [];
+    return mockFileSystem[path] || [];
+  };
+
+  // Show file listing for a specific path
+  const showListingForPath = (terminal: XTerm, path: string) => {
+    const files = getMockFilesForPath(path);
     
     if (files.length === 0) {
       terminal.writeln('');
@@ -230,6 +222,211 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
     });
     
     terminal.writeln(output);
+  };
+
+  // Show man page for a command
+  const showManPage = (terminal: XTerm, command: string) => {
+    const manPages: Record<string, string> = {
+      ls: 'NAME\n    ls - list directory contents\n\nSYNOPSIS\n    ls [DIRECTORY]\n\nDESCRIPTION\n    List information about the DIRECTORY (current directory by default).',
+      
+      cd: 'NAME\n    cd - change the working directory\n\nSYNOPSIS\n    cd [DIRECTORY]\n\nDESCRIPTION\n    Change the current working directory to DIRECTORY.',
+      
+      pwd: 'NAME\n    pwd - print name of current/working directory\n\nSYNOPSIS\n    pwd\n\nDESCRIPTION\n    Print the full filename of the current working directory.',
+      
+      cat: 'NAME\n    cat - concatenate files and print on the standard output\n\nSYNOPSIS\n    cat [FILE]\n\nDESCRIPTION\n    Concatenate FILE to standard output.',
+      
+      echo: 'NAME\n    echo - display a line of text\n\nSYNOPSIS\n    echo [STRING]\n\nDESCRIPTION\n    Echo the STRING(s) to standard output.',
+      
+      head: 'NAME\n    head - output the first part of files\n\nSYNOPSIS\n    head [FILE]\n\nDESCRIPTION\n    Print the first 10 lines of FILE to standard output.',
+      
+      tail: 'NAME\n    tail - output the last part of files\n\nSYNOPSIS\n    tail [FILE]\n\nDESCRIPTION\n    Print the last 10 lines of FILE to standard output.',
+      
+      grep: 'NAME\n    grep - print lines matching a pattern\n\nSYNOPSIS\n    grep PATTERN [FILE]\n\nDESCRIPTION\n    Search for PATTERN in FILE and print matching lines.',
+      
+      tree: 'NAME\n    tree - list contents of directories in a tree-like format\n\nSYNOPSIS\n    tree [DIRECTORY]\n\nDESCRIPTION\n    List contents of DIRECTORY (current directory by default) in a tree-like format.',
+      
+      clear: 'NAME\n    clear - clear the terminal screen\n\nSYNOPSIS\n    clear\n\nDESCRIPTION\n    Clear the terminal screen.'
+    };
+    
+    if (command in manPages) {
+      terminal.writeln(manPages[command]);
+    } else {
+      terminal.writeln(`No manual entry for ${command}`);
+    }
+  };
+
+  // Process commands locally for immediate feedback
+  const processCommand = (terminal: XTerm, cmd: string) => {
+    const command = cmd.trim();
+    const args = command.split(' ');
+    const mainCommand = args[0].toLowerCase();
+
+    switch (mainCommand) {
+      case 'clear':
+        terminal.clear();
+        break;
+
+      case 'ls':
+        // Show mock directory listing based on current path
+        showListingForPath(terminal, currentPath);
+        break;
+
+      case 'cd':
+        // cd is handled by the parent component through onCommand
+        // We don't need to do anything here as the parent will update currentPath
+        if (args.length < 2) {
+          terminal.writeln('cd: missing operand');
+        }
+        break;
+
+      case 'pwd':
+        terminal.writeln(currentPath);
+        break;
+
+      case 'echo':
+        terminal.writeln(command.substring(5));
+        break;
+
+      case 'cat':
+        if (args.length < 2) {
+          terminal.writeln('cat: missing file operand');
+        } else {
+          const fileName = args[1];
+          let filePath = fileName;
+          
+          // Handle relative paths
+          if (!fileName.startsWith('/')) {
+            filePath = `${currentPath}/${fileName}`;
+          }
+          
+          const content = getFileContents(filePath);
+          if (content) {
+            terminal.writeln(content);
+          } else {
+            terminal.writeln(`cat: ${fileName}: No such file or directory`);
+          }
+        }
+        break;
+        
+      case 'head':
+        if (args.length < 2) {
+          terminal.writeln('head: missing file operand');
+        } else {
+          const fileName = args[1];
+          let filePath = fileName;
+          
+          // Handle relative paths
+          if (!fileName.startsWith('/')) {
+            filePath = `${currentPath}/${fileName}`;
+          }
+          
+          const content = getFileContents(filePath);
+          if (content) {
+            // Show first 10 lines or less
+            const lines = content.split('\n').slice(0, 10);
+            terminal.writeln(lines.join('\n'));
+          } else {
+            terminal.writeln(`head: ${fileName}: No such file or directory`);
+          }
+        }
+        break;
+        
+      case 'tail':
+        if (args.length < 2) {
+          terminal.writeln('tail: missing file operand');
+        } else {
+          const fileName = args[1];
+          let filePath = fileName;
+          
+          // Handle relative paths
+          if (!fileName.startsWith('/')) {
+            filePath = `${currentPath}/${fileName}`;
+          }
+          
+          const content = getFileContents(filePath);
+          if (content) {
+            // Show last 10 lines or less
+            const lines = content.split('\n');
+            const startLine = Math.max(0, lines.length - 10);
+            terminal.writeln(lines.slice(startLine).join('\n'));
+          } else {
+            terminal.writeln(`tail: ${fileName}: No such file or directory`);
+          }
+        }
+        break;
+        
+      case 'grep':
+        if (args.length < 3) {
+          terminal.writeln('grep: missing arguments');
+          terminal.writeln('Usage: grep PATTERN FILE');
+        } else {
+          const pattern = args[1];
+          const fileName = args[2];
+          let filePath = fileName;
+          
+          // Handle relative paths
+          if (!fileName.startsWith('/')) {
+            filePath = `${currentPath}/${fileName}`;
+          }
+          
+          const content = getFileContents(filePath);
+          if (content) {
+            // Find lines matching pattern
+            const lines = content.split('\n');
+            const matchingLines = lines.filter(line => 
+              line.includes(pattern)
+            );
+            
+            if (matchingLines.length > 0) {
+              terminal.writeln(matchingLines.join('\n'));
+            }
+          } else {
+            terminal.writeln(`grep: ${fileName}: No such file or directory`);
+          }
+        }
+        break;
+        
+      case 'tree':
+        // Simple tree implementation for the current directory
+        terminal.writeln(`\x1b[1;34m${currentPath}\x1b[0m`);
+        const files = getMockFilesForPath(currentPath);
+        files.forEach(file => {
+          if (file.type === 'directory') {
+            terminal.writeln(`├── \x1b[1;34m${file.name}/\x1b[0m`);
+          } else {
+            terminal.writeln(`├── ${file.name}`);
+          }
+        });
+        break;
+
+      case 'man':
+        if (args.length < 2) {
+          terminal.writeln('What manual page do you want?');
+        } else {
+          const commandName = args[1];
+          showManPage(terminal, commandName);
+        }
+        break;
+
+      case 'help':
+        terminal.writeln('Available commands:');
+        terminal.writeln('  ls           - List files and directories');
+        terminal.writeln('  cd [dir]     - Change directory');
+        terminal.writeln('  pwd          - Print current directory');
+        terminal.writeln('  cat [file]   - Display file contents');
+        terminal.writeln('  head [file]  - Display first lines of a file');
+        terminal.writeln('  tail [file]  - Display last lines of a file');
+        terminal.writeln('  grep [pattern] [file] - Search for pattern in file');
+        terminal.writeln('  tree         - Display directory structure as a tree');
+        terminal.writeln('  echo [text]  - Display text');
+        terminal.writeln('  man [command] - Display manual for command');
+        terminal.writeln('  clear        - Clear the terminal');
+        terminal.writeln('  help         - Display this help message');
+        break;
+
+      default:
+        terminal.writeln(`Command not found: ${command}`);
+    }
   };
 
   return (
