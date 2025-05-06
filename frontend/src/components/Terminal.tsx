@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
@@ -13,105 +13,125 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
   const term = useRef<XTerm | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
   const commandBuffer = useRef<string>('');
+  const [terminalReady, setTerminalReady] = useState(false);
 
-  // Initialize terminal on first render
+  // Initialize terminal only after component is fully mounted
   useEffect(() => {
-    // Clean up previous terminal if it exists
-    if (term.current) {
-      term.current.dispose();
-      term.current = null;
-      fitAddon.current = null;
+    // Make sure DOM is fully rendered before attempting terminal initialization
+    const initTimeout = setTimeout(() => {
+      initTerminal();
+    }, 500); // Give the DOM time to render completely
+
+    return () => {
+      clearTimeout(initTimeout);
+      cleanupTerminal();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update when currentPath changes
+  useEffect(() => {
+    if (term.current && terminalReady) {
+      // Handle path changes if needed
     }
+  }, [currentPath, terminalReady]);
+
+  // Separate function to initialize the terminal
+  const initTerminal = () => {
+    // Clean up existing terminal if it exists
+    cleanupTerminal();
 
     // Wait for the DOM element to be available
     if (!terminalRef.current) return;
 
-    // Create new terminal instance with fixed dimensions
-    const newTerm = new XTerm({
-      cursorBlink: true,
-      theme: {
-        background: '#1E1E1E',
-        foreground: '#F8F8F8',
-      },
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      cols: 80, // Set fixed dimensions
-      rows: 24,
-      convertEol: true,
-      disableStdin: false,
-    });
+    try {
+      // Create new terminal instance
+      const newTerm = new XTerm({
+        cursorBlink: true,
+        theme: {
+          background: '#1E1E1E',
+          foreground: '#F8F8F8',
+        },
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        cols: 80,
+        rows: 24,
+        convertEol: true,
+        disableStdin: false,
+      });
 
-    // Store the terminal in ref
-    term.current = newTerm;
+      // Store in ref
+      term.current = newTerm;
 
-    // Create and load fit addon
-    const newFitAddon = new FitAddon();
-    newTerm.loadAddon(newFitAddon);
-    fitAddon.current = newFitAddon;
+      // Create and load fit addon
+      const newFitAddon = new FitAddon();
+      newTerm.loadAddon(newFitAddon);
+      fitAddon.current = newFitAddon;
 
-    // Open terminal in the container
-    newTerm.open(terminalRef.current);
+      // Open terminal in container - this is where the error can occur
+      newTerm.open(terminalRef.current);
 
-    // Add a delay before trying to fit
-    setTimeout(() => {
-      try {
-        // Try to fit terminal to container
+      // Setup resize handler
+      const handleResize = () => {
         if (fitAddon.current) {
-          fitAddon.current.fit();
+          try {
+            fitAddon.current.fit();
+          } catch (e) {
+            console.error('Terminal resize error:', e);
+          }
         }
-
-        // Show welcome message
-        newTerm.writeln('Welcome to Vektor!');
-        newTerm.writeln('Type "help" for a list of available commands.');
-        newTerm.writeln('');
-
-        // Show initial prompt
-        writePrompt(newTerm, currentPath);
-
-        // Set up input handling
-        setupKeyboardHandling(newTerm);
-      } catch (err) {
-        console.error('Terminal initialization error:', err);
-      }
-    }, 100);
-
-    // Handle window resize events
-    const handleResize = () => {
-      if (fitAddon.current) {
-        try {
-          fitAddon.current.fit();
-        } catch (e) {
-          // Ignore errors during resize
-        }
-      }
-    };
-    window.addEventListener('resize', handleResize);
-
-    // Cleanup on unmount
-    return () => {
-      window.removeEventListener('resize', handleResize);
+      };
       
-      if (term.current) {
+      window.addEventListener('resize', handleResize);
+
+      // Additional delay to make sure dimensions are properly set
+      setTimeout(() => {
         try {
-          term.current.dispose();
-        } catch (e) {
-          console.error('Error disposing terminal:', e);
+          // Try to fit terminal
+          if (fitAddon.current) {
+            fitAddon.current.fit();
+          }
+
+          // Show welcome message
+          newTerm.writeln('Welcome to Vektor!');
+          newTerm.writeln('Type "help" for a list of available commands.');
+          newTerm.writeln('');
+
+          // Show initial prompt
+          writePrompt(newTerm, currentPath);
+
+          // Set up input handling
+          setupKeyboardHandling(newTerm);
+          
+          // Mark terminal as ready
+          setTerminalReady(true);
+          
+          // Dispatch a custom event to signal terminal is ready
+          window.dispatchEvent(new CustomEvent('terminal-ready'));
+        } catch (err) {
+          console.error('Terminal initialization error:', err);
         }
-        term.current = null;
-      }
-    };
-  // Add missing dependencies currentPath and setupKeyboardHandling
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath]); // Including currentPath without setupKeyboardHandling (to avoid recreation issues)
-
-  // Update prompt when currentPath changes
-  useEffect(() => {
-    if (term.current) {
-      // Just store the updated path, don't recreate the terminal
+      }, 200);
+    } catch (err) {
+      console.error('Terminal creation error:', err);
     }
-  }, [currentPath]);
+  };
 
-  // Set up keyboard handling
+  // Clean up terminal
+  const cleanupTerminal = () => {
+    if (term.current) {
+      try {
+        term.current.dispose();
+      } catch (e) {
+        console.error('Error disposing terminal:', e);
+      }
+      term.current = null;
+    }
+    fitAddon.current = null;
+  };
+
+  // Rest of your terminal component code remains the same
   const setupKeyboardHandling = (terminal: XTerm) => {
+    // Your existing setupKeyboardHandling code
     commandBuffer.current = '';
 
     terminal.onKey(({ key, domEvent }: { key: string; domEvent: KeyboardEvent }) => {
@@ -148,12 +168,11 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
     });
   };
 
-  // Write the prompt with username, hostname and path
+  // Your existing writePrompt, getFileContents, etc. functions remain the same
   const writePrompt = (terminal: XTerm, path: string) => {
     terminal.write(`\r\n\x1b[1;32muser@vektor\x1b[0m:\x1b[1;34m${path}\x1b[0m$ `);
   };
 
-  // Get the mock file contents for a given path
   const getFileContents = (filePath: string): string | null => {
     const mockFileContents: Record<string, string> = {
       '/home/user/file1.txt': 'Hello World!',
@@ -435,7 +454,10 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
       style={{ 
         width: '100%', 
         height: '100%',
-        backgroundColor: '#1E1E1E' 
+        backgroundColor: '#1E1E1E',
+        display: 'flex',
+        position: 'relative',
+        overflow: 'hidden'
       }}
     />
   );

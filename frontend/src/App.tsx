@@ -3,6 +3,7 @@ import './App.css';
 import Terminal from './components/Terminal';
 import FileExplorer from './components/FileExplorer';
 import ContextPanel from './components/ContextPanel';
+import LoadingOverlay from './components/LoadingOverlay';
 
 // Define types for files
 interface FileItem {
@@ -46,11 +47,36 @@ function App() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [showContextPanel, setShowContextPanel] = useState(true);
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
   
   // Update file explorer when path changes
   useEffect(() => {
     fetchFiles(currentPath);
   }, [currentPath]);
+  
+  // Add a loading effect with an adequate duration
+  useEffect(() => {
+    // Use a longer loading time to ensure terminal initialization completes
+    const minLoadingTime = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500); // 2.5 seconds minimum loading time
+    
+    // Listen for terminal-ready event
+    const handleTerminalReady = () => {
+      // Add a small delay to ensure loading animation completes gracefully
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
+    };
+    
+    window.addEventListener('terminal-ready', handleTerminalReady);
+    
+    return () => {
+      clearTimeout(minLoadingTime);
+      window.removeEventListener('terminal-ready', handleTerminalReady);
+    };
+  }, []);
   
   const fetchFiles = async (path: string) => {
     try {
@@ -129,37 +155,41 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-900 text-gray-200">
-      {/* File Explorer */}
-      <div className="w-1/4 border-r border-gray-700 overflow-auto">
-        <FileExplorer 
-          currentPath={currentPath}
-          files={files}
-          onFileClick={handleFileClick}
-        />
-      </div>
+    <>
+      <LoadingOverlay isLoading={isLoading} />
       
-      {/* Terminal and Context Panel */}
-      <div className="w-3/4 flex flex-col">
-        {/* Terminal */}
-        <div className="flex-grow">
-          <Terminal 
-            onCommand={handleCommand}
+      <div className="flex h-screen bg-gray-900 text-gray-200">
+        {/* File Explorer */}
+        <div className="w-1/4 border-r border-gray-700 overflow-auto">
+          <FileExplorer 
             currentPath={currentPath}
+            files={files}
+            onFileClick={handleFileClick}
           />
         </div>
         
-        {/* Contextual Information Panel (Optional) */}
-        {showContextPanel && (
-          <div className="h-1/4 border-t border-gray-700 p-2 overflow-auto">
-            <ContextPanel 
-              commandHistory={commandHistory}
-              resourceUsage={{ cpu: '2%', memory: '128MB' }}
+        {/* Terminal and Context Panel */}
+        <div className="w-3/4 flex flex-col">
+          {/* Terminal */}
+          <div className="flex-grow">
+            <Terminal 
+              onCommand={handleCommand}
+              currentPath={currentPath}
             />
           </div>
-        )}
+          
+          {/* Contextual Information Panel (Optional) */}
+          {showContextPanel && (
+            <div className="h-1/4 border-t border-gray-700 p-2 overflow-auto">
+              <ContextPanel 
+                commandHistory={commandHistory}
+                resourceUsage={{ cpu: '2%', memory: '128MB' }}
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
