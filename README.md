@@ -73,7 +73,7 @@
 
 * All user inputs are validated server-side.
 * No network access by default in containers.
-* Working directory is mounted read-only, except `/home/term-user/tmp`.
+* Working directory is mounted read-only, except `/home/user/tmp`.
 * Logs all commands and stops container on suspicious activity.
 
 ---

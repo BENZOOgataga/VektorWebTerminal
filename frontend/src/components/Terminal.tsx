@@ -127,7 +127,7 @@ const Terminal: React.FC<TerminalProps> = ({ onCommand, currentPath }) => {
   };
   
   const displayPrompt = (term: XTerm, path: string) => {
-    const username = 'term-user';
+    const username = 'user'; // Changed from 'term-user' to 'user'
     const hostname = 'webterminal';
     const prompt = `\r\n\x1b[1;32m${username}@${hostname}\x1b[0m:\x1b[1;34m${path}\x1b[0m$ `;
     term.write(prompt);

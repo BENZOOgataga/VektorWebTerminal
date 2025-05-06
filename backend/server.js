@@ -98,7 +98,7 @@ async function createContainer() {
     Tty: true,
     OpenStdin: true,
     StdinOnce: false,
-    WorkingDir: '/home/term-user',
+    WorkingDir: '/home/user',
     HostConfig: {
       NetworkMode: 'none',
       ReadonlyRootfs: true,
@@ -117,7 +117,7 @@ async function executeCommand(containerId, command) {
   if (command === 'ls') {
     return 'file1.txt  file2.txt  directory1/  directory2/\n';
   } else if (command === 'pwd') {
-    return '/home/term-user\n';
+    return '/home/user\n';
   } else {
     return `Simulated output for: ${command}\n`;
   }
@@ -159,7 +159,7 @@ async function cleanupContainer(containerId) {
 
 // API Routes
 app.get('/api/files', async (req, res) => {
-  const { path: dirPath = '/home/term-user' } = req.query;
+  const { path: dirPath = '/home/user' } = req.query;
   
   // In a real implementation, you would list files from the container
   // For now, just return mock data

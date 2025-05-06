@@ -35,7 +35,7 @@ const ContextPanel: React.FC<ContextPanelProps> = ({ commandHistory, resourceUsa
         <div>
           <h4 className="text-sm font-semibold mb-1">User Info</h4>
           <div className="text-sm bg-gray-800 p-1 rounded">
-            <p>username: term-user</p>
+            <p>username: user</p>
             <p>permissions: standard</p>
             <p>session: ephemeral</p>
           </div>

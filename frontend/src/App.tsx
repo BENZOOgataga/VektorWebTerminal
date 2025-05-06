@@ -13,7 +13,7 @@ interface FileItem {
 }
 
 function App() {
-  const [currentPath, setCurrentPath] = useState('/home/term-user');
+  const [currentPath, setCurrentPath] = useState('/home/user');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [showContextPanel, setShowContextPanel] = useState(true);
